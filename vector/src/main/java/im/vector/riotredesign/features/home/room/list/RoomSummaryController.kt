@@ -29,8 +29,7 @@ import im.vector.riotredesign.features.home.room.detail.timeline.format.NoticeEv
 import im.vector.riotredesign.features.home.room.detail.timeline.helper.TimelineDateFormatter
 
 class RoomSummaryController(private val stringProvider: StringProvider,
-                            private val eventFormatter: NoticeEventFormatter,
-                            private val timelineDateFormatter: TimelineDateFormatter
+                            private val roomSummaryItemFactory: RoomSummaryItemFactory
 ) : TypedEpoxyController<RoomListViewState>() {
 
     var callback: Callback? = null
@@ -82,43 +81,9 @@ class RoomSummaryController(private val stringProvider: StringProvider,
 
     private fun buildRoomModels(summaries: List<RoomSummary>) {
         summaries.forEach { roomSummary ->
-            val unreadCount = roomSummary.notificationCount
-            val showHighlighted = roomSummary.highlightCount > 0
-
-            var lastMessageFormatted: CharSequence = ""
-            var lastMessageTime: CharSequence = ""
-            val lastMessage = roomSummary.lastMessage
-            if (lastMessage != null) {
-                val date = lastMessage.localDateTime()
-                val currentData = DateProvider.currentLocalDateTime()
-                val isSameDay = date.toLocalDate() == currentData.toLocalDate()
-                //TODO: get formatted
-                if (lastMessage.type == EventType.MESSAGE) {
-                    val content = lastMessage.content?.toModel<MessageContent>()
-                    lastMessageFormatted = content?.body ?: ""
-                } else {
-                    lastMessageFormatted = lastMessage.type
-                }
-                lastMessageTime = if (isSameDay) {
-                    timelineDateFormatter.formatMessageHour(date)
-                } else {
-                    //TODO: change this
-                    timelineDateFormatter.formatMessageDay(date)
-                }
-
-
-            }
-            roomSummaryItem {
-                id(roomSummary.roomId)
-                roomId(roomSummary.roomId)
-                lastEventTime(lastMessageTime)
-                lastFormattedEvent(lastMessageFormatted)
-                roomName(roomSummary.displayName)
-                avatarUrl(roomSummary.avatarUrl)
-                showHighlighted(showHighlighted)
-                unreadCount(unreadCount)
-                listener { callback?.onRoomSelected(roomSummary) }
-            }
+            roomSummaryItemFactory
+                    .create(roomSummary) { callback?.onRoomSelected(it) }
+                    .addTo(this)
         }
     }
 

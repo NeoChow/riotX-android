@@ -32,9 +32,10 @@ import io.realm.Realm
 import io.realm.RealmList
 import io.realm.RealmQuery
 
-internal class SenderRoomMemberExtractor(private val roomId: String) {
+internal class SenderRoomMemberExtractor {
 
     fun extractFrom(event: EventEntity, realm: Realm = event.realm): RoomMember? {
+        val roomId = event.roomId
         val sender = event.sender ?: return null
         // If the event is unlinked we want to fetch unlinked state events
         val unlinked = event.isUnlinked

@@ -23,13 +23,40 @@ import im.vector.matrix.android.internal.session.room.EventRelationExtractor
 import im.vector.matrix.android.internal.session.room.membership.SenderRoomMemberExtractor
 import io.realm.Realm
 
-internal class TimelineEventFactory(
+
+internal interface TimelineEventFactory {
+    fun create(eventEntity: EventEntity, realm: Realm = eventEntity.realm): TimelineEvent
+}
+
+internal interface CacheableTimelineEventFactory : TimelineEventFactory {
+    fun clear()
+}
+
+internal class SimpleTimelineEventFactory(private val roomMemberExtractor: SenderRoomMemberExtractor,
+                                          private val relationExtractor: EventRelationExtractor
+) : TimelineEventFactory {
+    override fun create(eventEntity: EventEntity, realm: Realm): TimelineEvent {
+        val senderRoomMember = roomMemberExtractor.extractFrom(eventEntity, realm)
+        val relations = relationExtractor.extractFrom(eventEntity, realm)
+        return TimelineEvent(
+                eventEntity.asDomain(),
+                eventEntity.localId,
+                eventEntity.displayIndex,
+                senderRoomMember?.displayName,
+                senderRoomMember?.avatarUrl,
+                eventEntity.sendState,
+                relations
+        )
+    }
+}
+
+internal class InMemoryTimelineEventFactory(
         private val roomMemberExtractor: SenderRoomMemberExtractor,
-        private val relationExtractor: EventRelationExtractor) {
+        private val relationExtractor: EventRelationExtractor) : CacheableTimelineEventFactory {
 
     private val cached = mutableMapOf<String, SenderData>()
 
-    fun create(eventEntity: EventEntity, realm: Realm = eventEntity.realm): TimelineEvent {
+    override fun create(eventEntity: EventEntity, realm: Realm): TimelineEvent {
         val sender = eventEntity.sender
         val cacheKey = sender + eventEntity.stateIndex
         val senderData = cached.getOrPut(cacheKey) {
@@ -48,7 +75,7 @@ internal class TimelineEventFactory(
         )
     }
 
-    fun clear() {
+    override fun clear() {
         cached.clear()
     }
 

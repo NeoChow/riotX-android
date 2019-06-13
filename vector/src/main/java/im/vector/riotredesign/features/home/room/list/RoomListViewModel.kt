@@ -18,10 +18,8 @@ package im.vector.riotredesign.features.home.room.list
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import arrow.core.Option
 import com.airbnb.mvrx.MvRxViewModelFactory
 import com.airbnb.mvrx.ViewModelContext
-import com.jakewharton.rxrelay2.BehaviorRelay
 import im.vector.matrix.android.api.session.Session
 import im.vector.matrix.android.api.session.room.model.Membership
 import im.vector.matrix.android.api.session.room.model.RoomSummary
@@ -31,10 +29,7 @@ import im.vector.riotredesign.core.utils.LiveEvent
 import im.vector.riotredesign.features.home.HomeRoomListObservableStore
 import org.koin.android.ext.android.get
 
-typealias RoomListFilterName = CharSequence
-
 class RoomListViewModel(initialState: RoomListViewState,
-                        private val session: Session,
                         private val homeRoomListObservableSource: HomeRoomListObservableStore,
                         private val alphabeticalRoomComparator: AlphabeticalRoomComparator,
                         private val chronologicalRoomComparator: ChronologicalRoomComparator)
@@ -44,17 +39,14 @@ class RoomListViewModel(initialState: RoomListViewState,
 
         @JvmStatic
         override fun create(viewModelContext: ViewModelContext, state: RoomListViewState): RoomListViewModel? {
-            val currentSession = viewModelContext.activity.get<Session>()
             val homeRoomListObservableSource = viewModelContext.activity.get<HomeRoomListObservableStore>()
             val chronologicalRoomComparator = viewModelContext.activity.get<ChronologicalRoomComparator>()
             val alphabeticalRoomComparator = viewModelContext.activity.get<AlphabeticalRoomComparator>()
-            return RoomListViewModel(state, currentSession, homeRoomListObservableSource, alphabeticalRoomComparator, chronologicalRoomComparator)
+            return RoomListViewModel(state, homeRoomListObservableSource, alphabeticalRoomComparator, chronologicalRoomComparator)
         }
     }
 
     private val displayMode = initialState.displayMode
-    private val roomListDisplayModeFilter = RoomListDisplayModeFilter(displayMode)
-    private val roomListFilter = BehaviorRelay.createDefault<Option<RoomListFilterName>>(Option.empty())
 
     private val _openRoomLiveData = MutableLiveData<LiveEvent<String>>()
     val openRoomLiveData: LiveData<LiveEvent<String>>
@@ -67,7 +59,6 @@ class RoomListViewModel(initialState: RoomListViewState,
     fun accept(action: RoomListActions) {
         when (action) {
             is RoomListActions.SelectRoom     -> handleSelectRoom(action)
-            is RoomListActions.FilterRooms    -> handleFilterRooms(action)
             is RoomListActions.ToggleCategory -> handleToggleCategory(action)
         }
     }
@@ -76,11 +67,6 @@ class RoomListViewModel(initialState: RoomListViewState,
 
     private fun handleSelectRoom(action: RoomListActions.SelectRoom) {
         _openRoomLiveData.postValue(LiveEvent(action.roomSummary.roomId))
-    }
-
-    private fun handleFilterRooms(action: RoomListActions.FilterRooms) {
-        val optionalFilter = Option.fromNullable(action.roomName)
-        roomListFilter.accept(optionalFilter)
     }
 
     private fun handleToggleCategory(action: RoomListActions.ToggleCategory) = setState {

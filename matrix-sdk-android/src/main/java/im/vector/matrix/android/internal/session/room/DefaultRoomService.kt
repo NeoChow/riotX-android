@@ -23,6 +23,7 @@ import im.vector.matrix.android.api.session.room.Room
 import im.vector.matrix.android.api.session.room.RoomService
 import im.vector.matrix.android.api.session.room.model.RoomSummary
 import im.vector.matrix.android.api.session.room.model.create.CreateRoomParams
+import im.vector.matrix.android.internal.database.mapper.RoomSummaryMapper
 import im.vector.matrix.android.internal.database.mapper.asDomain
 import im.vector.matrix.android.internal.database.model.RoomEntity
 import im.vector.matrix.android.internal.database.model.RoomSummaryEntity
@@ -34,6 +35,7 @@ import im.vector.matrix.android.internal.task.configureWith
 import im.vector.matrix.android.internal.util.fetchManaged
 
 internal class DefaultRoomService(private val monarchy: Monarchy,
+                                  private val roomSummaryMapper: RoomSummaryMapper,
                                   private val createRoomTask: CreateRoomTask,
                                   private val roomFactory: RoomFactory,
                                   private val taskExecutor: TaskExecutor) : RoomService {
@@ -53,7 +55,7 @@ internal class DefaultRoomService(private val monarchy: Monarchy,
     override fun liveRoomSummaries(): LiveData<List<RoomSummary>> {
         return monarchy.findAllMappedWithChanges(
                 { realm -> RoomSummaryEntity.where(realm).isNotEmpty(RoomSummaryEntityFields.DISPLAY_NAME) },
-                { it.asDomain() }
+                { roomSummaryMapper.map(it) }
         )
     }
 }

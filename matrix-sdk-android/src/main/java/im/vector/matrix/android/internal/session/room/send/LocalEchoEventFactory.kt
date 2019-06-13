@@ -34,10 +34,12 @@ import im.vector.matrix.android.internal.database.model.RoomEntity
 import im.vector.matrix.android.internal.database.query.findLastLiveChunkFromRoom
 import im.vector.matrix.android.internal.database.query.where
 import im.vector.matrix.android.internal.session.content.ThumbnailExtractor
+import im.vector.matrix.android.internal.session.room.RoomSummaryUpdater
 import im.vector.matrix.android.internal.util.StringProvider
 import im.vector.matrix.android.internal.util.tryTransactionAsync
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.HtmlRenderer
+import java.lang.IllegalStateException
 import java.util.*
 
 /**
@@ -49,7 +51,9 @@ import java.util.*
  *
  * The transactionID is used as loc
  */
-internal class LocalEchoEventFactory(private val credentials: Credentials, private val stringProvider: StringProvider) {
+internal class LocalEchoEventFactory(private val credentials: Credentials,
+                                     private val stringProvider: StringProvider,
+                                     private val roomSummaryUpdater: RoomSummaryUpdater) {
 
     fun createTextEvent(roomId: String, msgType: String, text: String, autoMarkdown: Boolean): Event {
         if (autoMarkdown && msgType == MessageType.MSGTYPE_TEXT) {
@@ -340,13 +344,15 @@ internal class LocalEchoEventFactory(private val credentials: Credentials, priva
     }
 
     fun saveLocalEcho(monarchy: Monarchy, event: Event) {
+        if (event.roomId == null) throw IllegalStateException("Your event should have a roomId")
         monarchy.tryTransactionAsync { realm ->
-            val roomEntity = RoomEntity.where(realm, roomId = event.roomId!!).findFirst()
-                    ?: return@tryTransactionAsync
+            val roomEntity = RoomEntity.where(realm, roomId = event.roomId).findFirst()
+                             ?: return@tryTransactionAsync
             val liveChunk = ChunkEntity.findLastLiveChunkFromRoom(realm, roomId = event.roomId)
-                    ?: return@tryTransactionAsync
+                            ?: return@tryTransactionAsync
 
             roomEntity.addSendingEvent(event, liveChunk.forwardsStateIndex ?: 0)
+            roomSummaryUpdater.update(realm, event.roomId)
         }
     }
 

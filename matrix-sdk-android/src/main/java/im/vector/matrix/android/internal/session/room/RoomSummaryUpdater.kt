@@ -36,6 +36,23 @@ import im.vector.matrix.android.internal.session.sync.model.RoomSyncUnreadNotifi
 import io.realm.Realm
 import io.realm.kotlin.createObject
 
+// TODO: maybe allow user of SDK to give that list
+private val PREVIEWABLE_TYPES = listOf(
+        EventType.MESSAGE,
+        EventType.STATE_ROOM_NAME,
+        EventType.STATE_ROOM_TOPIC,
+        EventType.STATE_ROOM_MEMBER,
+        EventType.STATE_HISTORY_VISIBILITY,
+        EventType.CALL_INVITE,
+        EventType.CALL_HANGUP,
+        EventType.CALL_ANSWER,
+        EventType.ENCRYPTED,
+        EventType.ENCRYPTION,
+        EventType.STATE_ROOM_THIRD_PARTY_INVITE,
+        EventType.STICKER,
+        EventType.STATE_ROOM_CREATE
+)
+
 internal class RoomSummaryUpdater(private val credentials: Credentials,
                                   private val roomDisplayNameResolver: RoomDisplayNameResolver,
                                   private val roomAvatarResolver: RoomAvatarResolver) {
@@ -71,13 +88,13 @@ internal class RoomSummaryUpdater(private val credentials: Credentials,
             roomSummaryEntity.membership = membership
         }
 
-        val lastEvent = EventEntity.latestEvent(realm, roomId)
+        val lastEvent = EventEntity.latestEvent(realm, roomId, includedTypes = PREVIEWABLE_TYPES)
         val lastTopicEvent = EventEntity.where(realm, roomId, EventType.STATE_ROOM_TOPIC).prev()?.asDomain()
         val otherRoomMembers = RoomMembers(realm, roomId).getLoaded().filterKeys { it != credentials.userId }
         roomSummaryEntity.displayName = roomDisplayNameResolver.resolve(roomId).toString()
         roomSummaryEntity.avatarUrl = roomAvatarResolver.resolve(roomId)
         roomSummaryEntity.topic = lastTopicEvent?.content.toModel<RoomTopicContent>()?.topic
-        roomSummaryEntity.lastMessage = lastEvent
+        roomSummaryEntity.latestEvent = lastEvent
         roomSummaryEntity.otherMemberIds.clear()
         roomSummaryEntity.otherMemberIds.addAll(otherRoomMembers.keys)
     }

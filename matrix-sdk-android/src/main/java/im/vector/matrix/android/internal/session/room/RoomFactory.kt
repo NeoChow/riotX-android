@@ -18,6 +18,7 @@ package im.vector.matrix.android.internal.session.room
 
 import com.zhuinden.monarchy.Monarchy
 import im.vector.matrix.android.api.session.room.Room
+import im.vector.matrix.android.internal.database.mapper.RoomSummaryMapper
 import im.vector.matrix.android.internal.session.room.relation.DefaultRelationService
 import im.vector.matrix.android.internal.session.room.relation.FindReactionEventForUndoTask
 import im.vector.matrix.android.internal.session.room.relation.UpdateQuickReactionTask
@@ -35,12 +36,13 @@ import im.vector.matrix.android.internal.session.room.state.DefaultStateService
 import im.vector.matrix.android.internal.session.room.state.SendStateTask
 import im.vector.matrix.android.internal.session.room.timeline.DefaultTimelineService
 import im.vector.matrix.android.internal.session.room.timeline.GetContextOfEventTask
+import im.vector.matrix.android.internal.session.room.timeline.InMemoryTimelineEventFactory
 import im.vector.matrix.android.internal.session.room.timeline.PaginationTask
-import im.vector.matrix.android.internal.session.room.timeline.TimelineEventFactory
 import im.vector.matrix.android.internal.task.TaskExecutor
 
 internal class RoomFactory(private val monarchy: Monarchy,
                            private val eventFactory: LocalEchoEventFactory,
+                           private val roomSummaryMapper: RoomSummaryMapper,
                            private val taskExecutor: TaskExecutor,
                            private val loadRoomMembersTask: LoadRoomMembersTask,
                            private val inviteTask: InviteTask,
@@ -54,8 +56,7 @@ internal class RoomFactory(private val monarchy: Monarchy,
                            private val leaveRoomTask: LeaveRoomTask) {
 
     fun instantiate(roomId: String): Room {
-        val roomMemberExtractor = SenderRoomMemberExtractor(roomId)
-        val timelineEventFactory = TimelineEventFactory(roomMemberExtractor, EventRelationExtractor())
+        val timelineEventFactory = InMemoryTimelineEventFactory(SenderRoomMemberExtractor(), EventRelationExtractor())
         val timelineService = DefaultTimelineService(roomId, monarchy, taskExecutor, timelineEventFactory, contextOfEventTask, paginationTask)
         val sendService = DefaultSendService(roomId, eventFactory, monarchy)
         val reactionService = DefaultRelationService(roomId, eventFactory, findReactionEventForUndoTask, updateQuickReactionTask, monarchy, taskExecutor)
@@ -66,6 +67,7 @@ internal class RoomFactory(private val monarchy: Monarchy,
         return DefaultRoom(
                 roomId,
                 monarchy,
+                roomSummaryMapper,
                 timelineService,
                 sendService,
                 stateService,

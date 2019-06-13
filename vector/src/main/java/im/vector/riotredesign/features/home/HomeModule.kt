@@ -33,6 +33,7 @@ import im.vector.riotredesign.features.home.room.detail.timeline.format.NoticeEv
 import im.vector.riotredesign.features.home.room.detail.timeline.helper.TimelineDateFormatter
 import im.vector.riotredesign.features.home.room.detail.timeline.helper.TimelineMediaSizeProvider
 import im.vector.riotredesign.features.home.room.list.RoomSummaryController
+import im.vector.riotredesign.features.home.room.list.RoomSummaryItemFactory
 import im.vector.riotredesign.features.html.EventHtmlRenderer
 import org.koin.core.parameter.parametersOf
 import org.koin.dsl.module.module
@@ -70,10 +71,10 @@ class HomeModule {
             val eventHtmlRenderer = EventHtmlRenderer(GlideApp.with(fragment), fragment.requireContext(), get())
             val noticeEventFormatter = get<NoticeEventFormatter>(parameters = { parametersOf(fragment) })
             val timelineMediaSizeProvider = TimelineMediaSizeProvider()
-            val colorProvider = ColorProvider(fragment.requireContext())
             val timelineDateFormatter = get<TimelineDateFormatter>()
+            val colorProvider = get<ColorProvider>()
             val messageItemFactory = MessageItemFactory(colorProvider, timelineMediaSizeProvider,
-                    timelineDateFormatter, eventHtmlRenderer, get(), get())
+                                                        timelineDateFormatter, eventHtmlRenderer, get(), get())
 
             val timelineItemFactory = TimelineItemFactory(
                     messageItemFactory = messageItemFactory,
@@ -83,8 +84,12 @@ class HomeModule {
             TimelineEventController(timelineDateFormatter, timelineItemFactory, timelineMediaSizeProvider)
         }
 
+        factory  {
+            RoomSummaryItemFactory(get(), get(), get())
+        }
+
         factory {
-            RoomSummaryController(get(), get(), get())
+            RoomSummaryController(get(), get())
         }
 
         factory {

@@ -27,6 +27,7 @@ import im.vector.matrix.android.api.session.signout.SignOutService
 import im.vector.matrix.android.api.session.sync.FilterService
 import im.vector.matrix.android.api.session.user.UserService
 import im.vector.matrix.android.internal.database.LiveEntityObserver
+import im.vector.matrix.android.internal.database.mapper.RoomSummaryMapper
 import im.vector.matrix.android.internal.database.model.SessionRealmModule
 import im.vector.matrix.android.internal.session.cache.ClearCacheTask
 import im.vector.matrix.android.internal.session.cache.RealmCacheService
@@ -41,7 +42,9 @@ import im.vector.matrix.android.internal.session.room.directory.GetPublicRoomTas
 import im.vector.matrix.android.internal.session.room.directory.GetThirdPartyProtocolsTask
 import im.vector.matrix.android.internal.session.room.membership.RoomDisplayNameResolver
 import im.vector.matrix.android.internal.session.room.membership.RoomMemberDisplayNameResolver
+import im.vector.matrix.android.internal.session.room.membership.SenderRoomMemberExtractor
 import im.vector.matrix.android.internal.session.room.prune.EventsPruner
+import im.vector.matrix.android.internal.session.room.timeline.SimpleTimelineEventFactory
 import im.vector.matrix.android.internal.session.signout.DefaultSignOutService
 import im.vector.matrix.android.internal.session.user.DefaultUserService
 import im.vector.matrix.android.internal.session.user.UserEntityUpdater
@@ -106,7 +109,13 @@ internal class SessionModule(private val sessionParams: SessionParams) {
         }
 
         scope(DefaultSession.SCOPE) {
-            DefaultRoomService(get(), get(), get(), get()) as RoomService
+            val timelineEventFactory = SimpleTimelineEventFactory(SenderRoomMemberExtractor(), EventRelationExtractor())
+            RoomSummaryMapper(timelineEventFactory)
+        }
+
+
+        scope(DefaultSession.SCOPE) {
+            DefaultRoomService(get(), get(), get(), get(), get()) as RoomService
         }
 
         scope(DefaultSession.SCOPE) {

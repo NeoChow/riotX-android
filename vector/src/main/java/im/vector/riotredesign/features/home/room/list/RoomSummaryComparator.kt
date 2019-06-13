@@ -33,17 +33,17 @@ class RoomSummaryComparator
         if (null != leftRoomSummary) {
             leftHighlightCount = leftRoomSummary.highlightCount
             leftNotificationCount = leftRoomSummary.notificationCount
-            leftTimestamp = leftRoomSummary.lastMessage?.originServerTs ?: 0
+            leftTimestamp = leftRoomSummary.latestEvent?.root?.originServerTs ?: 0
         }
         if (null != rightRoomSummary) {
             rightHighlightCount = rightRoomSummary.highlightCount
             rightNotificationCount = rightRoomSummary.notificationCount
-            rightTimestamp = rightRoomSummary.lastMessage?.originServerTs ?: 0
+            rightTimestamp = rightRoomSummary.latestEvent?.root?.originServerTs ?: 0
         }
 
-        if (rightRoomSummary?.lastMessage == null) {
+        if (rightRoomSummary?.latestEvent?.root == null) {
             retValue = -1
-        } else if (leftRoomSummary?.lastMessage == null) {
+        } else if (leftRoomSummary?.latestEvent?.root == null) {
             retValue = 1
         } else if (rightHighlightCount > 0 && leftHighlightCount == 0) {
             retValue = 1

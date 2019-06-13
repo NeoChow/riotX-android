@@ -68,8 +68,8 @@ class HomeActivity : VectorBaseActivity(), ToolbarConfigurable {
     override fun getLayoutRes() = R.layout.activity_home
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
         bindScope(getOrCreateScope(HomeModule.HOME_SCOPE))
+        super.onCreate(savedInstanceState)
         homeNavigator.activity = this
 
         navigationViewModel = ViewModelProviders.of(this).get(HomeNavigationViewModel::class.java)
