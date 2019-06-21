@@ -57,7 +57,7 @@ internal class TimelineEventFactory(
                     senderRoomMember?.avatarUrl)
         }
         val event = eventEntity.asDomain()
-        if (event.getClearType() == EventType.ENCRYPTED) {
+        if (event.getClearType() == EventType.ENCRYPTED && !event.isRedacted()) {
             handleEncryptedEvent(event, eventEntity.localId)
         }
 
@@ -91,6 +91,9 @@ internal class TimelineEventFactory(
                 Timber.e(failure, "Encrypted event: decryption failed")
                 if (failure is MXDecryptionException) {
                     event.setCryptoError(failure.cryptoError)
+                } else {
+                    // Other error
+                    Timber.e("Other error, should be handled")
                 }
             }
         }

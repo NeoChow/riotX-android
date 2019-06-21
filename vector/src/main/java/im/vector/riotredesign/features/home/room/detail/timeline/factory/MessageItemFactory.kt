@@ -62,7 +62,7 @@ class MessageItemFactory(private val colorProvider: ColorProvider,
 
         val informationData = messageInformationDataFactory.create(event, nextEvent)
 
-        if (event.root.unsignedData?.redactedEvent != null) {
+        if (event.root.isRedacted()) {
             //message is redacted
             return buildRedactedItem(informationData, callback)
         }

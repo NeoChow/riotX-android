@@ -53,7 +53,14 @@ class TimelineItemFactory(private val messageItemFactory: MessageItemFactory,
 
                 // Crypto
                 EventType.ENCRYPTION        -> encryptionItemFactory.create(event, callback)
-                EventType.ENCRYPTED         -> encryptedItemFactory.create(event, nextEvent, callback)
+                EventType.ENCRYPTED         -> {
+                    if (event.root.isRedacted()) {
+                        // Redacted event, let the MessageItemFactory handle it
+                        messageItemFactory.create(event, nextEvent, callback)
+                    } else {
+                        encryptedItemFactory.create(event, nextEvent, callback)
+                    }
+                }
 
                 // Unhandled event types (yet)
                 EventType.STATE_ROOM_THIRD_PARTY_INVITE,
