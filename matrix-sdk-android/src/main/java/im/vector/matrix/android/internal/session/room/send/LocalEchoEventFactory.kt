@@ -175,7 +175,7 @@ internal class LocalEchoEventFactory(private val credentials: Credentials, priva
         val content = MessageVideoContent(
                 type = MessageType.MSGTYPE_VIDEO,
                 body = attachment.name ?: "video",
-                info = VideoInfo(
+                videoInfo = VideoInfo(
                         mimeType = attachment.mimeType,
                         width = width,
                         height = height,
@@ -194,7 +194,7 @@ internal class LocalEchoEventFactory(private val credentials: Credentials, priva
         val content = MessageAudioContent(
                 type = MessageType.MSGTYPE_AUDIO,
                 body = attachment.name ?: "audio",
-                info = AudioInfo(
+                audioInfo = AudioInfo(
                         mimeType = attachment.mimeType ?: "audio/mpeg",
                         size = attachment.size
                 ),
