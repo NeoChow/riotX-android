@@ -20,10 +20,13 @@ import android.media.ExifInterface
 import android.net.Uri
 import android.os.Parcelable
 import android.widget.ImageView
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.github.piasy.biv.view.BigImageView
 import im.vector.matrix.android.api.Matrix
 import im.vector.matrix.android.api.session.content.ContentUrlResolver
+import im.vector.matrix.android.internal.crypto.attachments.ElementToDecrypt
+import im.vector.riotredesign.core.glide.ELEMENT_TO_DECRYPT
 import im.vector.riotredesign.core.glide.GlideApp
 import im.vector.riotredesign.core.utils.DimensionUtils.dpToPx
 import kotlinx.android.parcel.Parcelize
@@ -35,6 +38,7 @@ object ImageContentRenderer {
     data class Data(
             val filename: String,
             val url: String?,
+            val elementToDecrypt: ElementToDecrypt?,
             val height: Int?,
             val maxHeight: Int,
             val width: Int?,
@@ -59,17 +63,26 @@ object ImageContentRenderer {
         imageView.layoutParams.width = width
         val contentUrlResolver = Matrix.getInstance().currentSession!!.contentUrlResolver()
         val resolvedUrl = when (mode) {
-                              Mode.FULL_SIZE -> contentUrlResolver.resolveFullSize(data.url)
-                              Mode.THUMBNAIL -> contentUrlResolver.resolveThumbnail(data.url, width, height, ContentUrlResolver.ThumbnailMethod.SCALE)
-                          }
-                          //Fallback to base url
-                          ?: data.url
+            Mode.FULL_SIZE -> contentUrlResolver.resolveFullSize(data.url)
+            Mode.THUMBNAIL -> contentUrlResolver.resolveThumbnail(data.url, width, height, ContentUrlResolver.ThumbnailMethod.SCALE)
+        }
+        //Fallback to base url
+                ?: data.url
 
         GlideApp
                 .with(imageView)
                 .load(resolvedUrl)
+                .apply {
+                    // Give element to decrypt to Glide
+                    if (data.elementToDecrypt != null) {
+                        set(ELEMENT_TO_DECRYPT, data.elementToDecrypt)
+                                // And disable cache
+                                .skipMemoryCache(true)
+                                .diskCacheStrategy(DiskCacheStrategy.NONE)
+                    }
+                }
                 .dontAnimate()
-                .transform(RoundedCorners(dpToPx(8,imageView.context)))
+                .transform(RoundedCorners(dpToPx(8, imageView.context)))
                 .thumbnail(0.3f)
                 .into(imageView)
     }
@@ -79,6 +92,8 @@ object ImageContentRenderer {
         val contentUrlResolver = Matrix.getInstance().currentSession!!.contentUrlResolver()
         val fullSize = contentUrlResolver.resolveFullSize(data.url)
         val thumbnail = contentUrlResolver.resolveThumbnail(data.url, width, height, ContentUrlResolver.ThumbnailMethod.SCALE)
+
+        // TODO DECRYPT_FILE Decrypt file
         imageView.showImage(
                 Uri.parse(thumbnail),
                 Uri.parse(fullSize)

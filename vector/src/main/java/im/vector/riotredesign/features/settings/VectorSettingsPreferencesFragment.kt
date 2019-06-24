@@ -41,6 +41,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.view.isVisible
 import androidx.preference.*
+import com.bumptech.glide.Glide
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import im.vector.matrix.android.api.MatrixCallback
@@ -72,6 +73,10 @@ import im.vector.riotredesign.features.crypto.keys.KeysExporter
 import im.vector.riotredesign.features.crypto.keys.KeysImporter
 import im.vector.riotredesign.features.crypto.keysbackup.settings.KeysBackupManageActivity
 import im.vector.riotredesign.features.themes.ThemeUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.android.ext.android.inject
 import timber.log.Timber
 import java.lang.ref.WeakReference
@@ -715,6 +720,19 @@ class VectorSettingsPreferencesFragment : VectorPreferenceFragment(), SharedPref
 
             it.onPreferenceClickListener = Preference.OnPreferenceClickListener {
                 notImplemented()
+
+                // TODO DECRYPT_FILE Quick implementation of clear cache, finish this
+                GlobalScope.launch(Dispatchers.Main) {
+                    // On UI Thread
+                    Glide.get(requireContext()).clearMemory()
+
+                    withContext(Dispatchers.IO) {
+                        // On BG thread
+                        Glide.get(requireContext()).clearDiskCache()
+                    }
+                }
+
+
                 /* TODO
                 displayLoadingView()
 

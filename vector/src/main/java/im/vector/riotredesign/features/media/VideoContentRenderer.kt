@@ -24,6 +24,7 @@ import kotlinx.android.parcel.Parcelize
 
 object VideoContentRenderer {
 
+    // TODO DECRYPT_FILE Encrypted data
     @Parcelize
     data class Data(
             val filename: String,
