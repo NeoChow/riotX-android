@@ -29,6 +29,7 @@ import im.vector.matrix.android.api.session.room.send.SendState
 import im.vector.matrix.android.api.session.room.timeline.TimelineEvent
 import im.vector.riotredesign.R
 import im.vector.riotredesign.core.platform.VectorViewModel
+import im.vector.riotredesign.core.utils.isSingleEmoji
 import org.json.JSONObject
 import org.koin.android.ext.android.get
 
@@ -186,7 +187,8 @@ class MessageMenuViewModel(initialState: MessageMenuState) : VectorViewModel<Mes
             //Only event of type Event.EVENT_TYPE_MESSAGE are supported for the moment
             if (event.root.getClearType() != EventType.MESSAGE) return false
             //TODO if user is admin or moderator
-            return event.annotations?.reactionsSummary?.isNotEmpty() ?: false
+            return event.annotations?.reactionsSummary?.any { isSingleEmoji(it.key) }
+                    ?: false
         }
 
         private fun canEdit(event: TimelineEvent, myUserId: String): Boolean {

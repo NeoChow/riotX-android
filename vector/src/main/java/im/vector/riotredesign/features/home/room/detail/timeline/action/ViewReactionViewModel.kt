@@ -6,6 +6,7 @@ import com.airbnb.mvrx.*
 import im.vector.matrix.android.api.session.Session
 import im.vector.riotredesign.core.extensions.localDateTime
 import im.vector.riotredesign.core.platform.VectorViewModel
+import im.vector.riotredesign.core.utils.isSingleEmoji
 import im.vector.riotredesign.features.home.room.detail.timeline.helper.TimelineDateFormatter
 import org.koin.android.ext.android.get
 
@@ -45,14 +46,15 @@ class ViewReactionViewModel(private val session: Session,
                 return@withState
             }
             var results = ArrayList<ReactionInfo>()
-            event.annotations?.reactionsSummary?.forEach { sum ->
-
-                sum.sourceEvents.mapNotNull { room.getTimeLineEvent(it) }.forEach {
-                    val localDate = it.root.localDateTime()
-                    results.add(ReactionInfo(it.root.eventId!!, sum.key, it.root.senderId
-                            ?: "", it.getDisambiguatedDisplayName(), timelineDateFormatter.formatMessageHour(localDate)))
-                }
-            }
+            event.annotations?.reactionsSummary
+                    ?.filter { isSingleEmoji(it.key) }
+                    ?.forEach { sum ->
+                        sum.sourceEvents.mapNotNull { room.getTimeLineEvent(it) }.forEach {
+                            val localDate = it.root.localDateTime()
+                            results.add(ReactionInfo(it.root.eventId!!, sum.key, it.root.senderId
+                                    ?: "", it.getDisambiguatedDisplayName(), timelineDateFormatter.formatMessageHour(localDate)))
+                        }
+                    }
             setState {
                 copy(
                         mapReactionKeyToMemberList = Success(results.sortedBy { it.timestamp })

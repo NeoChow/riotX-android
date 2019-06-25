@@ -32,6 +32,7 @@ import com.github.piasy.biv.loader.glide.GlideImageLoader
 import com.jakewharton.threetenabp.AndroidThreeTen
 import im.vector.matrix.android.api.Matrix
 import im.vector.riotredesign.core.di.AppModule
+import im.vector.riotredesign.core.utils.initKnownEmojiHashSet
 import im.vector.riotredesign.features.configuration.VectorConfiguration
 import im.vector.riotredesign.features.crypto.keysbackup.KeysBackupModule
 import im.vector.riotredesign.features.home.HomeModule
@@ -95,6 +96,8 @@ class VectorApplication : Application() {
         FontsContractCompat.requestFont(this, fontRequest, koin.koinContext.get<EmojiCompatFontProvider>(), getFontThreadHandler())
 
         vectorConfiguration.initConfiguration()
+        //This should be done as early as possible
+        initKnownEmojiHashSet(appContext)
     }
 
     private fun logInfo() {
