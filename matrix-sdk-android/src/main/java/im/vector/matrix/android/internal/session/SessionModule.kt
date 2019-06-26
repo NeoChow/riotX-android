@@ -26,6 +26,7 @@ import im.vector.matrix.android.api.session.room.RoomService
 import im.vector.matrix.android.api.session.signout.SignOutService
 import im.vector.matrix.android.api.session.sync.FilterService
 import im.vector.matrix.android.api.session.user.UserService
+import im.vector.matrix.android.internal.database.configureEncryption
 import im.vector.matrix.android.internal.database.LiveEntityObserver
 import im.vector.matrix.android.internal.database.model.SessionRealmModule
 import im.vector.matrix.android.internal.session.cache.ClearCacheTask
@@ -71,6 +72,7 @@ internal class SessionModule(private val sessionParams: SessionParams) {
             RealmConfiguration.Builder()
                     .directory(directory)
                     .name("disk_store.realm")
+                    .configureEncryption("session_db_$childPath", context)
                     .modules(SessionRealmModule())
                     .deleteRealmIfMigrationNeeded()
                     .build()

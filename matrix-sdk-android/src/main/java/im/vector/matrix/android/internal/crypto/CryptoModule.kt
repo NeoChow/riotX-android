@@ -19,6 +19,7 @@ package im.vector.matrix.android.internal.crypto
 import android.content.Context
 import im.vector.matrix.android.api.auth.data.Credentials
 import im.vector.matrix.android.api.session.crypto.CryptoService
+import im.vector.matrix.android.internal.database.configureEncryption
 import im.vector.matrix.android.internal.crypto.actions.*
 import im.vector.matrix.android.internal.crypto.algorithms.megolm.MXMegolmDecryptionFactory
 import im.vector.matrix.android.internal.crypto.algorithms.megolm.MXMegolmEncryptionFactory
@@ -59,8 +60,10 @@ internal class CryptoModule {
 
             val credentials: Credentials = get()
 
+            val userIDHash = credentials.userId.hash()
             RealmConfiguration.Builder()
-                    .directory(File(context.filesDir, credentials.userId.hash()))
+                    .directory(File(context.filesDir, userIDHash))
+                    .configureEncryption("crypto_module_$userIDHash", context)
                     .name("crypto_store.realm")
                     .modules(RealmCryptoStoreModule())
                     .schemaVersion(RealmCryptoStoreMigration.CRYPTO_STORE_SCHEMA_VERSION)

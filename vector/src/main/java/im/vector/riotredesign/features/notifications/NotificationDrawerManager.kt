@@ -25,7 +25,7 @@ import androidx.core.app.Person
 import im.vector.matrix.android.api.session.Session
 import im.vector.riotredesign.BuildConfig
 import im.vector.riotredesign.R
-import im.vector.riotredesign.core.utils.SecretStoringUtils
+import im.vector.matrix.android.api.util.SecretStoringUtils
 import timber.log.Timber
 import java.io.File
 import java.io.FileInputStream
