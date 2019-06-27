@@ -34,6 +34,7 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import im.vector.matrix.android.api.Matrix
 import im.vector.riotredesign.R
 import im.vector.riotredesign.core.extensions.showPassword
 import im.vector.riotredesign.core.platform.SimpleTextWatcher
@@ -44,7 +45,10 @@ import im.vector.riotredesign.core.utils.allGranted
 import im.vector.riotredesign.core.utils.copyToClipboard
 import im.vector.riotredesign.core.utils.toast
 import im.vector.riotredesign.features.MainActivity
+import im.vector.riotredesign.features.notifications.NotificationDrawerManager
 import im.vector.riotredesign.features.themes.ThemeUtils
+import im.vector.riotredesign.features.workers.signout.SignOutUiWorker
+import org.koin.android.ext.android.get
 import java.lang.ref.WeakReference
 import java.util.*
 
@@ -226,6 +230,20 @@ class VectorSettingsGeneral : VectorSettingsBaseFragment() {
                 false
             }
         }
+
+        // Sign out
+        findPreference("SETTINGS_SIGN_OUT_KEY")
+                .onPreferenceClickListener = Preference.OnPreferenceClickListener {
+            activity?.let {
+                val notificationDrawerManager: NotificationDrawerManager = get()
+
+                SignOutUiWorker(requireActivity(), notificationDrawerManager)
+                        .perform(Matrix.getInstance().currentSession!!)
+            }
+
+            false
+        }
+
 
         // Deactivate account section
 
