@@ -16,16 +16,15 @@
 
 package im.vector.riotredesign.features.home.room.detail.timeline.util
 
-import com.vdurmont.emoji.EmojiManager
 import im.vector.matrix.android.api.session.events.model.EventType
 import im.vector.matrix.android.api.session.room.timeline.TimelineEvent
 import im.vector.riotredesign.core.extensions.localDateTime
 import im.vector.riotredesign.core.resources.ColorProvider
+import im.vector.riotredesign.core.utils.isSingleEmoji
 import im.vector.riotredesign.features.home.getColorFromUserId
 import im.vector.riotredesign.features.home.room.detail.timeline.helper.TimelineDateFormatter
 import im.vector.riotredesign.features.home.room.detail.timeline.item.MessageInformationData
 import im.vector.riotredesign.features.home.room.detail.timeline.item.ReactionInfoData
-import im.vector.riotredesign.features.reactions.EmojiDataSource
 import me.gujun.android.span.span
 
 /**
@@ -70,7 +69,7 @@ class MessageInformationDataFactory(private val timelineDateFormatter: TimelineD
                 memberName = formattedMemberName,
                 showInformation = showInformation,
                 orderedReactionList = event.annotations?.reactionsSummary
-                        ?.filter { EmojiDataSource.isSingleEMoji(it.key) }
+                        ?.filter { isSingleEmoji(it.key) }
                         ?.map {
                             ReactionInfoData(it.key, it.count, it.addedByMe, it.localEchoEvents.isEmpty())
                         },
