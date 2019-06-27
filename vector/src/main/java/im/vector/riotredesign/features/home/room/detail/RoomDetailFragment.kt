@@ -65,6 +65,7 @@ import im.vector.riotredesign.core.dialogs.DialogListItem
 import im.vector.riotredesign.core.epoxy.LayoutManagerStateRestorer
 import im.vector.riotredesign.core.extensions.hideKeyboard
 import im.vector.riotredesign.core.extensions.observeEvent
+import im.vector.riotredesign.core.extensions.setTextOrHide
 import im.vector.riotredesign.core.glide.GlideApp
 import im.vector.riotredesign.core.platform.VectorBaseFragment
 import im.vector.riotredesign.core.utils.*
@@ -72,10 +73,7 @@ import im.vector.riotredesign.features.autocomplete.command.AutocompleteCommandP
 import im.vector.riotredesign.features.autocomplete.command.CommandAutocompletePolicy
 import im.vector.riotredesign.features.autocomplete.user.AutocompleteUserPresenter
 import im.vector.riotredesign.features.command.Command
-import im.vector.riotredesign.features.home.AvatarRenderer
-import im.vector.riotredesign.features.home.HomeModule
-import im.vector.riotredesign.features.home.HomePermalinkHandler
-import im.vector.riotredesign.features.home.getColorFromUserId
+import im.vector.riotredesign.features.home.*
 import im.vector.riotredesign.features.home.room.detail.composer.TextComposerActions
 import im.vector.riotredesign.features.home.room.detail.composer.TextComposerView
 import im.vector.riotredesign.features.home.room.detail.composer.TextComposerViewModel
@@ -93,6 +91,7 @@ import im.vector.riotredesign.features.media.ImageContentRenderer
 import im.vector.riotredesign.features.media.ImageMediaViewerActivity
 import im.vector.riotredesign.features.media.VideoContentRenderer
 import im.vector.riotredesign.features.media.VideoMediaViewerActivity
+import im.vector.riotredesign.features.notifications.NotificationDrawerManager
 import im.vector.riotredesign.features.reactions.EmojiReactionPickerActivity
 import im.vector.riotredesign.features.settings.PreferencesManager
 import kotlinx.android.parcel.Parcelize
@@ -167,9 +166,12 @@ class RoomDetailFragment :
     private val commandAutocompletePolicy = CommandAutocompletePolicy()
     private val autocompleteCommandPresenter: AutocompleteCommandPresenter by inject { parametersOf(this) }
     private val autocompleteUserPresenter: AutocompleteUserPresenter by inject { parametersOf(this) }
-    private val homePermalinkHandler: HomePermalinkHandler by inject()
+    private val permalinkHandler: PermalinkHandler by inject()
+
+    private val notificationDrawerManager by inject<NotificationDrawerManager>()
 
     private lateinit var scrollOnNewMessageCallback: ScrollOnNewMessageCallback
+    private lateinit var scrollOnHighlightedEventCallback: ScrollOnHighlightedEventCallback
 
     override fun getLayoutResId() = R.layout.fragment_room_detail
 
@@ -197,6 +199,11 @@ class RoomDetailFragment :
         }
         actionViewModel.actionCommandEvent.observeEvent(this) {
             handleActions(it)
+        }
+
+        roomDetailViewModel.navigateToEvent.observeEvent(this) {
+            //
+            scrollOnHighlightedEventCallback.scheduleScrollTo(it)
         }
 
         roomDetailViewModel.selectSubscribe(
@@ -272,6 +279,18 @@ class RoomDetailFragment :
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+
+        notificationDrawerManager.setCurrentRoom(roomDetailArgs.roomId)
+    }
+
+    override fun onPause() {
+        super.onPause()
+
+        notificationDrawerManager.setCurrentRoom(null)
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode == RESULT_OK && data != null) {
@@ -297,12 +316,14 @@ class RoomDetailFragment :
         val layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, true)
         val stateRestorer = LayoutManagerStateRestorer(layoutManager).register()
         scrollOnNewMessageCallback = ScrollOnNewMessageCallback(layoutManager)
+        scrollOnHighlightedEventCallback = ScrollOnHighlightedEventCallback(layoutManager, timelineEventController)
         recyclerView.layoutManager = layoutManager
         recyclerView.itemAnimator = null
         recyclerView.setHasFixedSize(true)
         timelineEventController.addModelBuildListener {
             it.dispatchTo(stateRestorer)
             it.dispatchTo(scrollOnNewMessageCallback)
+            it.dispatchTo(scrollOnHighlightedEventCallback)
         }
 
         recyclerView.addOnScrollListener(
@@ -467,7 +488,7 @@ class RoomDetailFragment :
         val summary = state.asyncRoomSummary()
         val inviter = state.asyncInviter()
         if (summary?.membership == Membership.JOIN) {
-            timelineEventController.setTimeline(state.timeline)
+            timelineEventController.setTimeline(state.timeline, state.eventId)
             inviteView.visibility = View.GONE
 
             val uid = session.sessionParams.credentials.userId
@@ -480,18 +501,14 @@ class RoomDetailFragment :
         } else if (state.asyncInviter.complete) {
             vectorBaseActivity.finish()
         }
+        composerLayout.setRoomEncrypted(state.isEncrypted)
     }
 
     private fun renderRoomSummary(state: RoomDetailViewState) {
         state.asyncRoomSummary()?.let {
             roomToolbarTitleView.text = it.displayName
             AvatarRenderer.render(it, roomToolbarAvatarImageView)
-            if (it.topic.isNotEmpty()) {
-                roomToolbarSubtitleView.visibility = View.VISIBLE
-                roomToolbarSubtitleView.text = it.topic
-            } else {
-                roomToolbarSubtitleView.visibility = View.GONE
-            }
+            roomToolbarSubtitleView.setTextOrHide(it.topic)
         }
     }
 
@@ -534,8 +551,31 @@ class RoomDetailFragment :
 
     // TimelineEventController.Callback ************************************************************
 
-    override fun onUrlClicked(url: String) {
-        homePermalinkHandler.launch(url)
+    override fun onUrlClicked(url: String): Boolean {
+        return permalinkHandler.launch(requireActivity(), url, object : NavigateToRoomInterceptor {
+            override fun navToRoom(roomId: String, eventId: String?): Boolean {
+                // Same room?
+                if (roomId == roomDetailArgs.roomId) {
+                    // Navigation to same room
+                    if (eventId == null) {
+                        showSnackWithMessage(getString(R.string.navigate_to_room_when_already_in_the_room))
+                    } else {
+                        // Highlight and scroll to this event
+                        roomDetailViewModel.process(RoomDetailActions.NavigateToEvent(eventId, timelineEventController.searchPositionOfEvent(eventId)))
+                    }
+                    return true
+                }
+
+                // Not handled
+                return false
+            }
+        })
+    }
+
+    override fun onUrlLongClicked(url: String): Boolean {
+        // Copy the url to the clipboard
+        copyToClipboard(requireContext(), url)
+        return true
     }
 
     override fun onEventVisible(event: TimelineEvent) {
@@ -547,11 +587,13 @@ class RoomDetailFragment :
     }
 
     override fun onImageMessageClicked(messageImageContent: MessageImageContent, mediaData: ImageContentRenderer.Data, view: View) {
+        // TODO Use navigator
         val intent = ImageMediaViewerActivity.newIntent(vectorBaseActivity, mediaData)
         startActivity(intent)
     }
 
     override fun onVideoMessageClicked(messageVideoContent: MessageVideoContent, mediaData: VideoContentRenderer.Data, view: View) {
+        // TODO Use navigator
         val intent = VideoMediaViewerActivity.newIntent(vectorBaseActivity, mediaData)
         startActivity(intent)
     }
@@ -681,9 +723,9 @@ class RoomDetailFragment :
                         .show()
             }
             MessageMenuViewModel.ACTION_QUICK_REACT    -> {
-                //eventId,ClickedOn,Opposite
-                (actionData.data as? Triple<String, String, String>)?.let { (eventId, clickedOn, opposite) ->
-                    roomDetailViewModel.process(RoomDetailActions.UpdateQuickReactAction(eventId, clickedOn, opposite))
+                //eventId,ClickedOn,Add
+                (actionData.data as? Triple<String, String, Boolean>)?.let { (eventId, clickedOn, add) ->
+                    roomDetailViewModel.process(RoomDetailActions.UpdateQuickReactAction(eventId, clickedOn, add))
                 }
             }
             MessageMenuViewModel.ACTION_EDIT           -> {
@@ -762,7 +804,7 @@ class RoomDetailFragment :
         imm?.showSoftInput(composerLayout.composerEditText, InputMethodManager.SHOW_IMPLICIT)
     }
 
-    fun showSnackWithMessage(message: String, duration: Int = Snackbar.LENGTH_SHORT) {
+    private fun showSnackWithMessage(message: String, duration: Int = Snackbar.LENGTH_SHORT) {
         val snack = Snackbar.make(view!!, message, duration)
         snack.view.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.notification_accent_color))
         snack.show()
