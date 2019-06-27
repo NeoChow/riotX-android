@@ -19,7 +19,6 @@ package im.vector.matrix.android.internal.crypto
 import android.content.Context
 import im.vector.matrix.android.api.auth.data.Credentials
 import im.vector.matrix.android.api.session.crypto.CryptoService
-import im.vector.matrix.android.internal.database.configureEncryption
 import im.vector.matrix.android.internal.crypto.actions.*
 import im.vector.matrix.android.internal.crypto.algorithms.megolm.MXMegolmDecryptionFactory
 import im.vector.matrix.android.internal.crypto.algorithms.megolm.MXMegolmEncryptionFactory
@@ -34,12 +33,13 @@ import im.vector.matrix.android.internal.crypto.store.IMXCryptoStore
 import im.vector.matrix.android.internal.crypto.store.db.RealmCryptoStore
 import im.vector.matrix.android.internal.crypto.store.db.RealmCryptoStoreMigration
 import im.vector.matrix.android.internal.crypto.store.db.RealmCryptoStoreModule
-import im.vector.matrix.android.internal.crypto.store.db.hash
 import im.vector.matrix.android.internal.crypto.tasks.*
 import im.vector.matrix.android.internal.crypto.verification.DefaultSasVerificationService
+import im.vector.matrix.android.internal.database.configureEncryption
 import im.vector.matrix.android.internal.session.DefaultSession
 import im.vector.matrix.android.internal.session.cache.ClearCacheTask
 import im.vector.matrix.android.internal.session.cache.RealmClearCacheTask
+import im.vector.matrix.android.internal.util.md5
 import io.realm.RealmConfiguration
 import org.koin.dsl.module.module
 import org.matrix.olm.OlmManager
@@ -60,7 +60,7 @@ internal class CryptoModule {
 
             val credentials: Credentials = get()
 
-            val userIDHash = credentials.userId.hash()
+            val userIDHash = credentials.userId.md5()
             RealmConfiguration.Builder()
                     .directory(File(context.filesDir, userIDHash))
                     .configureEncryption("crypto_module_$userIDHash", context)
