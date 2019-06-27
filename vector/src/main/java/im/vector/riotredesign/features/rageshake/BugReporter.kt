@@ -122,6 +122,7 @@ object BugReporter {
      * Send a bug report.
      *
      * @param context           the application context
+     * @param forSuggestion     true to send a suggestion
      * @param withDevicesLogs   true to include the device log
      * @param withCrashLogs     true to include the crash logs
      * @param withScreenshot    true to include the screenshot
@@ -130,6 +131,7 @@ object BugReporter {
      */
     @SuppressLint("StaticFieldLeak")
     fun sendBugReport(context: Context,
+                      forSuggestion: Boolean,
                       withDevicesLogs: Boolean,
                       withCrashLogs: Boolean,
                       withScreenshot: Boolean,
@@ -202,9 +204,17 @@ object BugReporter {
                 }
 
                 if (!mIsCancelled) {
+                    val text = "[RiotX] " +
+                            if (forSuggestion) {
+                                "[Suggestion] "
+                            } else {
+                                ""
+                            } +
+                            bugDescription
+
                     // build the multi part request
                     val builder = BugReporterMultipartBody.Builder()
-                            .addFormDataPart("text", "[RiotX] $bugDescription")
+                            .addFormDataPart("text", text)
                             .addFormDataPart("app", "riot-android")
                             .addFormDataPart("user_agent", Matrix.getInstance().getUserAgent())
                             .addFormDataPart("user_id", userId)
@@ -269,6 +279,11 @@ object BugReporter {
 
                     // Special for RiotX
                     builder.addFormDataPart("label", "[RiotX]")
+
+                    // Suggestion
+                    if (forSuggestion) {
+                        builder.addFormDataPart("label", "[Suggestion]")
+                    }
 
                     if (getCrashFile(context).exists()) {
                         builder.addFormDataPart("label", "crash")
@@ -412,10 +427,11 @@ object BugReporter {
     /**
      * Send a bug report either with email or with Vector.
      */
-    fun openBugReportScreen(activity: Activity) {
+    fun openBugReportScreen(activity: Activity, forSuggestion: Boolean = true) {
         screenshot = takeScreenshot(activity)
 
         val intent = Intent(activity, BugReportActivity::class.java)
+        intent.putExtra("FOR_SUGGESTION", forSuggestion)
         activity.startActivity(intent)
     }
 
